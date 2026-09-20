@@ -1,385 +1,305 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:katib/core/utils/constants.dart';
-import 'package:katib/widgets/library_item_card.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../../widgets/main_scaffold.dart';
+import '../../widgets/library_item_card.dart';
+import '../../core/utils/constants.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/providers/providers.dart';
+import '../../core/models/file_model.dart';
 
 /// شاشة المكتبة
-class LibraryScreen extends StatefulWidget {
+class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
   @override
-  State<LibraryScreen> createState() => _LibraryScreenState();
+  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> {
+class _LibraryScreenState extends ConsumerState<LibraryScreen> {
+  List<String> _selectedFiles = [];
   String _searchQuery = '';
-  String _selectedFilter = 'جميع الملفات';
-  String _selectedSort = 'آخر إضافة';
-
-  // قائمة الملفات (بيانات تجريبية)
-  final List<LibraryItem> _libraryItems = [
-    LibraryItem(
-      id: '1',
-      title: 'كتاب الطاقة المتجددة',
-      author: 'د. أحمد محمد',
-      type: 'PDF',
-      size: '12.5 MB',
-      pages: 245,
-      date: '2024-01-15',
-      icon: Icons.picture_as_pdf_rounded,
-      color: Colors.red,
-      isFavorite: true,
-      tags: ['طاقة', 'بيئة', 'علوم'],
-    ),
-    LibraryItem(
-      id: '2',
-      title: 'بحث في الذكاء الاصطناعي',
-      author: 'م. سارة علي',
-      type: 'DOCX',
-      size: '2.3 MB',
-      pages: 45,
-      date: '2024-01-10',
-      icon: Icons.description_rounded,
-      color: Colors.blue,
-      isFavorite: false,
-      tags: ['تقنية', 'ذكاء اصطناعي', 'برمجة'],
-    ),
-    LibraryItem(
-      id: '3',
-      title: 'ملخص رواية الأيقاظ',
-      author: 'إياد جميل',
-      type: 'TXT',
-      size: '120 KB',
-      pages: 12,
-      date: '2024-01-05',
-      icon: Icons.text_snippet_rounded,
-      color: Colors.green,
-      isFavorite: true,
-      tags: ['أدب', 'رواية', 'ملخص'],
-    ),
-    LibraryItem(
-      id: '4',
-      title: 'عرض تقديمي للمشروع',
-      author: 'فريق العمل',
-      type: 'PPTX',
-      size: '8.7 MB',
-      pages: 32,
-      date: '2024-01-01',
-      icon: Icons.slideshow_rounded,
-      color: Colors.orange,
-      isFavorite: false,
-      tags: ['مشاريع', 'عروض', 'عمل'],
-    ),
-    LibraryItem(
-      id: '5',
-      title: 'جدول بيانات مبيعات',
-      author: 'إدارة المبيعات',
-      type: 'XLSX',
-      size: '1.8 MB',
-      pages: 5,
-      date: '2023-12-28',
-      icon: Icons.table_chart_rounded,
-      color: Colors.purple,
-      isFavorite: false,
-      tags: ['بيانات', 'مبيعات', 'إحصائيات'],
-    ),
-    LibraryItem(
-      id: '6',
-      title: 'كتاب الطبخ العربي',
-      author: 'شيف مها',
-      type: 'EPUB',
-      size: '15.2 MB',
-      pages: 180,
-      date: '2023-12-20',
-      icon: Icons.menu_book_rounded,
-      color: Colors.brown,
-      isFavorite: true,
-      tags: ['طبخ', 'وصفات', 'طعام'],
-    ),
-  ];
-
-  // قائمة الملفات المفلترة
-  List<LibraryItem> get _filteredItems {
-    List<LibraryItem> filtered = _libraryItems;
-    
-    // تصفية حسب الاستعلامات
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((item) {
-        return item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               item.author.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               item.tags.any((tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()));
-      }).toList();
-    }
-    
-    // تصفية حسب النوع
-    if (_selectedFilter != 'جميع الملفات') {
-      filtered = filtered.where((item) => item.type == _selectedFilter).toList();
-    }
-    
-    // ترتيب
-    switch (_selectedSort) {
-      case 'الأقدم':
-        filtered.sort((a, b) => a.date.compareTo(b.date));
-        break;
-      case 'الاسم':
-        filtered.sort((a, b) => a.title.compareTo(b.title));
-        break;
-      case 'الحجم':
-        // ترتيب حسب الحجم (مؤقت - يجب تحويل الحجم إلى رقم)
-        break;
-      default: // آخر إضافة
-        filtered.sort((a, b) => b.date.compareTo(a.date));
-        break;
-    }
-    
-    return filtered;
-  }
+  String _sortBy = 'name';
+  bool _sortDescending = false;
+  String _filterBy = 'all';
+  bool _isLoading = false;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // شريط البحث
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'بحث في المكتبة...',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: () {
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onChanged: (value) {
-              setState(() => _searchQuery = value);
-            },
-          ),
-        ),
+  void initState() {
+    super.initState();
+    _requestStoragePermission();
+  }
+
+  Future<void> _requestStoragePermission() async {
+    if (Platform.isAndroid) {
+      final status = await Permission.storage.request();
+      if (status.isDenied) {
+        // Show explanation
+        await Permission.storage.request();
+      }
+    }
+  }
+
+  Future<void> _refreshFiles() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 500));
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _importFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: AppConstants.supportedFileExtensions,
+        allowMultiple: true,
+      );
+
+      if (result != null) {
+        setState(() => _isLoading = true);
         
-        // شريط التصفية والترتيب
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
+        for (final file in result.files) {
+          if (file.path != null) {
+            await ref.read(importFileProvider(file.path!));
+          }
+        }
+        
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم استيراد ${result.files.length} ملف(ات)')),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ في استيراد الملف: $e')),
+      );
+    }
+  }
+
+  Future<void> _importFromCamera() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() => _isLoading = true);
+        
+        final filePath = result.files.first.path!;
+        await ref.read(importFileProvider(filePath));
+        
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم استيراد الصورة ومعالجتها باستخدام OCR')),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ في استيراد الصورة: $e')),
+      );
+    }
+  }
+
+  Future<void> _importFromText() async {
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إضافة نص جديد'),
+        content: TextField(
+          decoration: const InputDecoration(
+            hintText: 'ادخل النص هنا...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 5,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'text'),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+
+    if (text != null && text.isNotEmpty) {
+      // Create a text file model
+      final fileModel = FileModel(
+        id: '',
+        name: 'نص جديد ${DateTime.now().millisecondsSinceEpoch}',
+        path: '',
+        type: FileType.txt.name,
+        size: text.length,
+        wordCount: text.split(RegExp(r'\s+')).length,
+        mimeType: 'text/plain',
+        language: 'ar',
+      );
+      
+      await ref.read(addFileProvider(fileModel));
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إضافة النص الجديد')),
+      );
+    }
+  }
+
+  void _showAddFileDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // تصفية حسب النوع
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedFilter,
-                  items: [
-                    'جميع الملفات',
-                    'PDF',
-                    'DOCX',
-                    'TXT',
-                    'PPTX',
-                    'XLSX',
-                    'EPUB',
-                  ].map((filter) => DropdownMenuItem(
-                    value: filter,
-                    child: Text(filter),
-                  )).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _selectedFilter = value);
-                    }
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'تصفية',
-                    prefixIcon: const Icon(Icons.filter_list_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                ),
+              const Text(
+                'استيراد ملف',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(width: 12),
-              
-              // ترتيب
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedSort,
-                  items: [
-                    'آخر إضافة',
-                    'الأقدم',
-                    'الاسم',
-                    'الحجم',
-                  ].map((sort) => DropdownMenuItem(
-                    value: sort,
-                    child: Text(sort),
-                  )).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _selectedSort = value);
-                    }
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'ترتيب',
-                    prefixIcon: const Icon(Icons.sort_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.upload_file),
+                title: const Text('استيراد من الملفات'),
+                subtitle: const Text('PDF, DOCX, TXT, EPUB, PPTX, XLSX, صور'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _importFile();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('التقاط من الكاميرا'),
+                subtitle: const Text('تصوير مستند واستخراج النص'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _importFromCamera();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.text_fields),
+                title: const Text('إضافة نص جديد'),
+                subtitle: const Text('كتابة نص مباشرة'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _importFromText();
+                },
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('إلغاء'),
               ),
             ],
           ),
-        ),
-        
-        const SizedBox(height: 8),
-        
-        // عدد النتائج
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            '${_filteredItems.length} ملفًا',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 8),
-        
-        // قائمة الملفات
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _filteredItems.length,
-            itemBuilder: (context, index) {
-              final item = _filteredItems[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: LibraryItemCard(
-                  item: item,
-                  onTap: () {
-                    // فتح الملف
-                    _showFileOptions(context, item);
-                  },
-                  onFavoriteTap: () {
-                    // تبديل المفضل
-                    setState(() {
-                      item.isFavorite = !item.isFavorite;
-                    });
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// عرض خيارات الملف
-  void _showFileOptions(BuildContext context, LibraryItem item) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              item.title,
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            
-            // قراءة الملف
-            ListTile(
-              leading: const Icon(Icons.remove_red_eye_rounded),
-              title: const Text('قراءة الملف'),
-              subtitle: const Text('فتح الملف في قارئ التطبيق'),
-              onTap: () {
-                Navigator.pop(context);
-                // فتح القارئ
-                // TODO: تنفيذ فتح القارئ
-              },
-            ),
-            
-            // استخراج المعلومات
-            ListTile(
-              leading: const Icon(Icons.find_in_page_rounded),
-              title: const Text('استخراج معلومات'),
-              subtitle: const Text('البحث واستخراج المحتوى من الملف'),
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/extraction');
-              },
-            ),
-            
-            // مشاركة الملف
-            ListTile(
-              leading: const Icon(Icons.share_rounded),
-              title: const Text('مشاركة الملف'),
-              subtitle: const Text('مشاركة الملف مع الآخرين'),
-              onTap: () {
-                Navigator.pop(context);
-                // مشاركة الملف
-                // TODO: تنفيذ مشاركة الملف
-              },
-            ),
-            
-            // إعادة التسمية
-            ListTile(
-              leading: const Icon(Icons.edit_rounded),
-              title: const Text('إعادة التسمية'),
-              subtitle: const Text('تغيير اسم الملف'),
-              onTap: () {
-                Navigator.pop(context);
-                _showRenameDialog(context, item);
-              },
-            ),
-            
-            // حذف الملف
-            ListTile(
-              leading: const Icon(Icons.delete_outline_rounded),
-              title: const Text('حذف الملف'),
-              subtitle: const Text('حذف الملف من المكتبة'),
-              textColor: Theme.of(context).colorScheme.error,
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteDialog(context, item);
-              },
-            ),
-            
-            const SizedBox(height: 8),
-            
-            // زر الإلغاء
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('إلغاء'),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  /// عرض مربع حوار إعادة التسمية
-  void _showRenameDialog(BuildContext context, LibraryItem item) {
-    final controller = TextEditingController(text: item.title);
-    
+  void _showFileOptions(BuildContext context, FileModel file) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'خيارات الملف',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Icon(
+                  file.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: file.isFavorite ? Colors.red : null,
+                ),
+                title: Text(
+                  file.isFavorite ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة',
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  ref.read(toggleFavoriteProvider(file.id));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('تحرير المعلومات'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showEditFileDialog(file);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('حذف الملف'),
+                textColor: Colors.red,
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteConfirmation(file);
+                },
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('إلغاء'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditFileDialog(FileModel file) {
+    final nameController = TextEditingController(text: file.name);
+    final authorController = TextEditingController(text: file.author ?? '');
+    final tagsController = TextEditingController(text: file.tags.join(', '));
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('إعادة التسمية'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'ادخل الاسم الجديد',
+        title: const Text('تحرير معلومات الملف'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'اسم الملف',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: authorController,
+                decoration: const InputDecoration(
+                  labelText: 'المؤلف',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: tagsController,
+                decoration: const InputDecoration(
+                  labelText: 'الوسوم (مفصولة بفواصل)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
         ),
         actions: [
@@ -387,12 +307,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('إلغاء'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () {
-              // تحديث اسم الملف
-              setState(() {
-                item.title = controller.text;
-              });
+              final updatedFile = file.copyWith(
+                name: nameController.text,
+                author: authorController.text.isEmpty ? null : authorController.text,
+                tags: tagsController.text
+                    .split(',')
+                    .map((t) => t.trim())
+                    .where((t) => t.isNotEmpty)
+                    .toList(),
+              );
+              ref.read(updateFileProvider(updatedFile));
               Navigator.pop(context);
             },
             child: const Text('حفظ'),
@@ -402,79 +328,257 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  /// عرض مربع حوار الحذف
-  void _showDeleteDialog(BuildContext context, LibraryItem item) {
+  void _showDeleteConfirmation(FileModel file) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('حذف الملف'),
-        content: Text('هل أنت متأكد من حذف الملف "${item.title}"؟'),
+        title: const Text('تأكيد الحذف'),
+        content: Text('هل أنت متأكد من حذف ملف "${file.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('إلغاء'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () {
-              // حذف الملف
-              setState(() {
-                _libraryItems.remove(item);
-              });
+              ref.read(deleteFileProvider(file.id));
               Navigator.pop(context);
-              
-              // عرض رسالة نجاح
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('تم حذف الملف "${item.title}"'),
-                  action: SnackBarAction(
-                    label: 'تراجع',
-                    onPressed: () {
-                      // استعادة الملف
-                      setState(() {
-                        _libraryItems.add(item);
-                      });
-                    },
-                  ),
-                ),
+                SnackBar(content: Text('تم حذف الملف: ${file.name}')),
               );
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            child: const Text('حذف'),
+            child: const Text('حذف', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
-}
 
-/// نموذج لعنصر المكتبة
-class LibraryItem {
-  final String id;
-  String title;
-  final String author;
-  final String type;
-  final String size;
-  final int pages;
-  final String date;
-  final IconData icon;
-  final Color color;
-  bool isFavorite;
-  final List<String> tags;
+  Widget _buildSearchBar(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: 'بحث في المكتبة...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: colorScheme.outline),
+          ),
+          filled: true,
+          fillColor: colorScheme.surfaceContainerHighest,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        onChanged: (value) => setState(() => _searchQuery = value),
+        textDirection: TextDirection.rtl,
+      ),
+    );
+  }
 
-  LibraryItem({
-    required this.id,
-    required this.title,
-    required this.author,
-    required this.type,
-    required this.size,
-    required this.pages,
-    required this.date,
-    required this.icon,
-    required this.color,
-    required this.isFavorite,
-    required this.tags,
-  });
+  Widget _buildFilterControls(ColorScheme colorScheme) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _buildFilterChip('جميع الملفات', 'all', colorScheme),
+          const SizedBox(width: 8),
+          _buildFilterChip('PDF', FileType.pdf.name, colorScheme),
+          const SizedBox(width: 8),
+          _buildFilterChip('DOCX', FileType.docx.name, colorScheme),
+          const SizedBox(width: 8),
+          _buildFilterChip('صور', FileType.image.name, colorScheme),
+          const SizedBox(width: 8),
+          _buildFilterChip('المفضلة', 'favorite', colorScheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value, ColorScheme colorScheme) {
+    final isSelected = _filterBy == value;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() => _filterBy = selected ? value : 'all');
+      },
+      backgroundColor: colorScheme.surfaceContainerHighest,
+      selectedColor: colorScheme.primaryContainer,
+      checkmarkColor: colorScheme.onPrimaryContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+    );
+  }
+
+  Widget _buildFileList(ColorScheme colorScheme) {
+    final filesAsync = ref.watch(allFilesProvider);
+    
+    return filesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('خطأ في تحميل الملفات: $error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _refreshFiles,
+              child: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
+      data: (files) {
+        // Filter files
+        List<FileModel> filteredFiles = files;
+        
+        if (_filterBy != 'all') {
+          if (_filterBy == 'favorite') {
+            filteredFiles = filteredFiles.where((f) => f.isFavorite).toList();
+          } else {
+            filteredFiles = filteredFiles.where((f) => f.type == _filterBy).toList();
+          }
+        }
+        
+        // Search
+        if (_searchQuery.isNotEmpty) {
+          final queryLower = _searchQuery.toLowerCase();
+          filteredFiles = filteredFiles
+              .where((f) => 
+                  f.name.toLowerCase().contains(queryLower) ||
+                  (f.author?.toLowerCase().contains(queryLower) ?? false) ||
+                  f.tags.any((t) => t.toLowerCase().contains(queryLower))
+              )
+              .toList();
+        }
+        
+        // Sort
+        switch (_sortBy) {
+          case 'name':
+            filteredFiles.sort((a, b) => _sortDescending 
+                ? b.name.compareTo(a.name) 
+                : a.name.compareTo(b.name));
+            break;
+          case 'date':
+            filteredFiles.sort((a, b) => _sortDescending 
+                ? b.createdAt.compareTo(a.createdAt) 
+                : a.createdAt.compareTo(b.createdAt));
+            break;
+          case 'size':
+            filteredFiles.sort((a, b) => _sortDescending 
+                ? b.size.compareTo(a.size) 
+                : a.size.compareTo(b.size));
+            break;
+          case 'type':
+            filteredFiles.sort((a, b) => _sortDescending 
+                ? b.type.compareTo(a.type) 
+                : a.type.compareTo(b.type));
+            break;
+        }
+        
+        if (filteredFiles.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.folder_open,
+                  size: 64,
+                  color: colorScheme.onSurface.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'لا يوجد ملفات',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'اضغط على زر الإضافة لاستيراد ملفات جديدة',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+        
+        return RefreshIndicator(
+          onRefresh: _refreshFiles,
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filteredFiles.length + (_isLoading ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (_isLoading && index == filteredFiles.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              
+              final file = filteredFiles[index];
+              return LibraryItemCard(
+                file: file,
+                onTap: () => _navigateToFileDetail(file),
+                onLongPress: () => _showFileOptions(context, file),
+                onFavoriteTap: () => ref.read(toggleFavoriteProvider(file.id)),
+                isSelected: _selectedFiles.contains(file.id),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  void _navigateToFileDetail(FileModel file) {
+    // Navigate to file detail screen
+    // For now, just show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('فتح الملف: ${file.name}')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
+    return MainScaffold(
+      title: 'المكتبة',
+      showFloatingActionButton: true,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddFileDialog(context),
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        child: const Icon(Icons.add),
+      ),
+      body: Column(
+        children: [
+          _buildSearchBar(colorScheme),
+          _buildFilterControls(colorScheme),
+          const SizedBox(height: 16),
+          Expanded(child: _buildFileList(colorScheme)),
+        ],
+      ),
+    );
+  }
 }
