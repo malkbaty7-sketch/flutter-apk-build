@@ -1,0 +1,201 @@
+name: katib
+description: "كاتب - منصة إنتاجية وكتابة ونشر ذكية للمستندات والكتب الإلكترونية. تطبيق عربي متكامل لإدارة المعرفة واستخراج المعلومات وإنشاء المحتوى وتصميم الكتب."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Design
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.18.1
+  material_color_utilities: ^0.8.0
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.7
+  cached_network_image: ^3.3.0
+  photo_view: ^0.14.0
+  flutter_pdfview: ^3.0.0
+  pdfx: ^2.1.0
+  syncfusion_flutter_pdfviewer: ^24.1.45
+
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+  state_notifier: ^1.0.0
+
+  # Navigation
+  go_router: ^13.0.0
+
+  # Storage & Database
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.1
+  sqflite: ^2.3.0
+  path: ^1.8.3
+
+  # File Handling
+  file_picker: ^6.1.1
+  open_filex: ^4.3.2
+  file_selector: ^0.9.3+1
+  permission_handler: ^11.1.0
+  external_path: ^1.0.3
+
+  # Document Processing
+  pdf: ^3.10.7
+  pdf_text: ^0.5.0
+  docx: ^0.1.1
+  epub: ^2.0.0
+  flutter_docx: ^0.1.2
+  advance_pdf_viewer: ^2.0.1
+
+  # OCR & Text Processing
+  google_mlkit_text_recognition: ^0.11.0
+  flutter_tesseract_ocr: ^0.4.2
+  image_picker: ^1.0.4
+  image: ^4.1.4
+  camera: ^0.10.5+7
+
+  # Text Editing
+  flutter_quill: ^8.0.0
+  zefyrka: ^1.0.0
+  super_editor: ^0.6.0
+  flutter_markdown: ^0.6.18
+
+  # Search & AI
+  fuzzy: ^0.3.1
+  natural_language: ^0.3.0
+  http: ^1.1.0
+  dio: ^5.4.0
+
+  # Audio
+  flutter_tts: ^3.6.3
+  speech_to_text: ^6.1.0
+  audioplayers: ^5.0.1
+
+  # Authentication
+  firebase_auth: ^4.11.0
+  google_sign_in: ^6.1.5
+  firebase_core: ^2.16.0
+  flutter_secure_storage: ^8.0.0
+  crypto: ^3.0.3
+
+  # Cloud & Sync
+  firebase_storage: ^11.5.0
+  cloud_firestore: ^4.14.0
+  firebase_messaging: ^14.7.0
+
+  # Social & Sharing
+  share_plus: ^7.2.1
+  url_launcher: ^6.2.2
+
+  # Utilities
+  uuid: ^4.2.2
+  equatable: ^2.0.5
+  freezed: ^2.4.6
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.8.1
+  intl_utils: ^2.8.2
+  provider: ^6.1.1
+  flutter_native_splash: ^2.3.1
+  flutter_launcher_icons: ^0.13.1
+
+  # Performance
+  flutter_bloc: ^8.1.3
+  connectivity_plus: ^5.0.2
+  battery_plus: ^5.0.2
+  device_info_plus: ^9.0.3
+
+  # Print & Export
+  printing: ^5.11.1
+  share_extend: ^2.0.0
+
+  # Charts & Analytics
+  syncfusion_flutter_charts: ^24.1.45
+  fl_chart: ^0.63.0
+
+  # Notifications
+  flutter_local_notifications: ^16.1.2
+
+  # Settings
+  settings_ui: ^2.0.2
+  dynamic_color: ^1.6.5
+
+  # Web View
+  webview_flutter: ^4.4.2
+  url_strategy: ^0.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  build_runner: ^2.4.8
+  json_serializable: ^6.7.1
+  riverpod_generator: ^2.3.9
+  freezed: ^2.4.6
+  mockito: ^5.4.4
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/fonts/
+    - assets/templates/
+    - assets/icons/
+
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Cairo-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Cairo-Light.ttf
+          weight: 300
+    - family: Tajawal
+      fonts:
+        - asset: assets/fonts/Tajawal-Regular.ttf
+        - asset: assets/fonts/Tajawal-Bold.ttf
+          weight: 700
+    - family: NotoNaskhArabic
+      fonts:
+        - asset: assets/fonts/NotoNaskhArabic-Regular.ttf
+    - family: Almarai
+      fonts:
+        - asset: assets/fonts/Almarai-Regular.ttf
+        - asset: assets/fonts/Almarai-Bold.ttf
+          weight: 700
+    - family: IBM Plex Sans Arabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+          weight: 700
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Roboto-Italic.ttf
+          style: italic
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans-Regular.ttf
+        - asset: assets/fonts/OpenSans-Bold.ttf
+          weight: 700
+
+flutter_intl:
+  enabled: true
+  class_name: AppLocalizations
+  main_locale: ar
+  fallback_locale: en
+  arb_dir: lib/l10n
+  output_dir: lib/generated
