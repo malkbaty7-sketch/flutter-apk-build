@@ -49,9 +49,8 @@ dependencies:
   # Document Processing
   pdf: ^3.10.7
   pdf_text: ^0.5.0
-  docx: ^0.1.1
-  epub: ^2.0.0
-  flutter_docx: ^0.1.2
+  docx_template: ^0.1.1
+  epubx: ^4.0.0
   advance_pdf_viewer: ^2.0.1
 
   # OCR & Text Processing
@@ -60,6 +59,7 @@ dependencies:
   image_picker: ^1.0.4
   image: ^4.1.4
   camera: ^0.10.5+7
+  nlp: ^0.5.0
 
   # Text Editing
   flutter_quill: ^8.0.0
@@ -114,6 +114,7 @@ dependencies:
   # Print & Export
   printing: ^5.11.1
   share_extend: ^2.0.0
+  pdf_widgets: ^3.0.0
 
   # Charts & Analytics
   syncfusion_flutter_charts: ^24.1.45
